@@ -97,16 +97,37 @@
     var checkSpellTimer = null;
 
     function replaceWord(editor, word){
-        editor.focus()
+
+        console.log('321')
+        if (CKEDITOR.env.ie){console.log('ie'); editor.focus();}
         var range = editor.getSelection().getRanges()[0]
         var parent = range.startContainer.getParent()
         if (CKEDITOR.env.ie){
             parent.getChildren().getItem(0).$.data=''
             range.startContainer.$.data=word
         }
-        else {range.startContainer.$.replaceWholeText(word);}
+        else {
+            //var s = range.createBookmark(true)
+            range.startContainer.$.replaceWholeText(word);
+
+            }
+            console.log('123')
+            console.log(range)
         parent.remove(true)
-        editor.focus()
+
+        if (CKEDITOR.env.webkit){
+            var newRange = new CKEDITOR.dom.range(range.document);
+            newRange.setStart(range.startContainer ,range.startOffset);
+            newRange.setEnd(range.startContainer ,range.startOffset);
+            newRange.select()
+        }
+        else {
+            editor.focus();
+            range.select();
+        }
+
+
+
 
     }
 
