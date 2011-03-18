@@ -106,13 +106,7 @@
             parent.getChildren().getItem(0).$.data=''
             range.startContainer.$.data=word
         }
-        else {
-            //var s = range.createBookmark(true)
-            range.startContainer.$.replaceWholeText(word);
-
-            }
-            console.log('123')
-            console.log(range)
+        else {range.startContainer.$.replaceWholeText(word);}
         parent.remove(true)
 
         if (CKEDITOR.env.webkit){
