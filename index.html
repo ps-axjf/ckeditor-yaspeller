@@ -9,6 +9,15 @@
         a { color: #3992BD;}
     </style>
     <script src="http://ckeditor-yaspeller.googlecode.com/hg/ckeditor/ckeditor_source.js" type="text/javascript"></script>
+    <script>
+        function changeCss(v){
+            if (v=='blue') css = 'color: blue;background: yellow;'
+            else if (v=='red') css = 'color: red;background: none;'
+            else if (v=='def') css = 'color: black ; background: transparent url(data:image/gif;base64,R0lGODlhBAADAIABAP8NDQAAACH5BAEAAAEALAAAAAAEAAMAAAIFRB5mGQUAOw==) repeat-x 50% 100%;background-image: url("data:image/gif;base64,R0lGODlhBAADAIABAP8NDQAAACH5BAEAAAEALAAAAAAEAAMAAAIFRB5mGQUAOw==");'
+            else if (v=='input'){inp = document.getElementById('css').value;if (inp!=''){css = inp};}
+            CKEDITOR.instances.default.document.appendStyleText('span.yaspeller_error {'+css+'}')
+        }
+    </script>
 
 </head>
 <body>
@@ -16,7 +25,12 @@
     <h2>Description</h2>
         Plugin for CKeditor for spell-checking using <a href="http://api.yandex.ru/speller/doc/dg/concepts/api-overview.xml" target="_blank">Yandex.Speller Web Service API</a>
     <h2>Demo</h2>
-    <textarea class="ckeditor" name="editor1"></textarea>
+    <div style="margin-bottom:5px">Mark errors as&nbsp;&nbsp;&nbsp;
+<a onclick="changeCss('red')" style="color: red;background: none;cursor: pointer;">red font</a>&nbsp;&nbsp;&nbsp;
+<a onclick="changeCss('blue')" style="color: blue;background: yellow; cursor: pointer;">blue font and yellow background</a>&nbsp;&nbsp;&nbsp;
+<a onclick="changeCss('def')" style='cursor: pointer;color: black ; background: transparent url(data:image/gif;base64,R0lGODlhBAADAIABAP8NDQAAACH5BAEAAAEALAAAAAAEAAMAAAIFRB5mGQUAOw==) repeat-x 50% 100%;background-image: url("data:image/gif;base64,R0lGODlhBAADAIABAP8NDQAAACH5BAEAAAEALAAAAAAEAAMAAAIFRB5mGQUAOw==")'>black font and red underline</a>
+</div><div style="margin-bottom: 10px;">or you can use your own css <input type="text" id="css" size="50"><input type="button" value="Apply" onclick="changeCss('input')"></div>
+<textarea class="ckeditor" name="default"></textarea>
     <h2>Download</h2>
     You can download this project in either <a href="http://github.com/ps-axjf/ckeditor-yaspeller/zipball/master" target="_blank">zip</a> or <a href="http://github.com/ps-axjf/ckeditor-yaspeller/tarball/master" target="_blank">tar</a> formats.
     <h2>Contact</h2>
