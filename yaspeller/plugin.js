@@ -229,24 +229,26 @@
 
     function checkSpellInit(body, name){
         var send_text = ''
-        var text = body.getChild(0).getText()
-        var splitted_text = uniqueArray(splitText(text))
-        if (cinstance=='') {
-            cinstance = name
-            for (word in yaspeller_errors[cinstance]) {if (!inArray(splitted_text, word)){delete yaspeller_errors[cinstance][word];}}
-            for (word in yaspeller_corrs[cinstance]) {if (!inArray(splitted_text, word)){delete yaspeller_corrs[cinstance][word];}}
-            if (splitted_text.length>0) {
-                for (i=0;i<splitted_text.length;i++){
-                    if (!yaspeller_errors[cinstance][splitted_text[i]] && !yaspeller_corrs[cinstance][splitted_text[i]]){
-                        yaspeller_sarr[cinstance].push(splitted_text[i])
-                        send_text+=splitted_text[i]+' '
+        if (body.getChild(0)!=null){
+            var text = body.getChild(0).getText()
+            var splitted_text = uniqueArray(splitText(text))
+            if (cinstance=='') {
+                cinstance = name
+                for (word in yaspeller_errors[cinstance]) {if (!inArray(splitted_text, word)){delete yaspeller_errors[cinstance][word];}}
+                for (word in yaspeller_corrs[cinstance]) {if (!inArray(splitted_text, word)){delete yaspeller_corrs[cinstance][word];}}
+                if (splitted_text.length>0) {
+                    for (i=0;i<splitted_text.length;i++){
+                        if (!yaspeller_errors[cinstance][splitted_text[i]] && !yaspeller_corrs[cinstance][splitted_text[i]]){
+                            yaspeller_sarr[cinstance].push(splitted_text[i])
+                            send_text+=splitted_text[i]+' '
+                        }
                     }
+                    focusafter = false
+                    checkWord(send_text, getCharset())
                 }
-                focusafter = false
-                checkWord(send_text, getCharset())
             }
+            else CKEDITOR.tools.setTimeout( checkSpellInit, 100, this, [body, name]);
         }
-        else CKEDITOR.tools.setTimeout( checkSpellInit, 100, this, [body, name]);
     }
 
 
