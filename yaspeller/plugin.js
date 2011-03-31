@@ -1,6 +1,26 @@
 (function(){
+
+    var changemode = {
+        canUndo: false,
+        exec: function(editor) {
+            var a = editor.getCommand('changespellcheckermode')
+            if (a.state==1) {
+                a.setState(CKEDITOR.TRISTATE_OFF)
+                var errs = editor.document.getElementsByTag('span')
+                var errs_len = errs.count()
+                if (errs_len>0){for (var i=errs_len-1;i>=0;i--){if (errs.getItem(i).hasClass('yaspeller_error')){errs.getItem(i).remove(true);}}}
+            }
+            else {
+                a.setState(CKEDITOR.TRISTATE_ON);
+                checkSpellInit(editor.document.getBody(), editor.name)
+            }
+        }
+    }
+
     CKEDITOR.plugins.add('yaspeller',
     {
+        lang : ['en', 'ru'],
+
         init: function(editor){
             separator = ".,\"'?!;: "
             cinstance = ''
@@ -20,6 +40,14 @@
 				yaspeller_sarr[editor.name] = new Array()
 				checkSpellInit(body, editor.name)
 			});
+            editor.addCommand('changespellcheckermode', changemode);
+            editor.getCommand('changespellcheckermode').setState(CKEDITOR.TRISTATE_ON)
+            editor.ui.addButton( 'SpellCheckerMode',
+				{
+					label : editor.lang.yaspeller.button,
+					icon: this.path + 'images/button.png',
+					command : 'changespellcheckermode'
+				});
 
             var dataProcessor = editor.dataProcessor;
 			htmlFilter = dataProcessor && dataProcessor.htmlFilter;
@@ -112,8 +140,8 @@
         var range = editor.getSelection().getRanges()[0]
         var parent = range.startContainer.getParent()
         if (CKEDITOR.env.ie){
-            parent.getChildren().getItem(0).$.data=''
-            range.startContainer.$.data=word
+            parent.getChildren().getItem(0).$.data='';
+            range.startContainer.$.data=word;
         }
         else { range.startContainer.$.replaceWholeText(word);}
         parent.remove(true)
@@ -129,7 +157,7 @@
     }
 
     function checkSpell(e){
-        if (e.data.$.keyCode<37 || e.data.$.keyCode>40){
+        if ((e.data.$.keyCode<37 || e.data.$.keyCode>40) && this.getCommand('changespellcheckermode').state==1){
             cinstance = this.name
             var range = this.getSelection().getRanges()[0];
             var parent = range.startContainer.getParent()
