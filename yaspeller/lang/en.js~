@@ -1,7 +1,0 @@
-CKEDITOR.plugins.setLang( 'yaspeller', 'en',
-    {
-        button : 'Enable/Disable spellchecker',
-
-    }
-)
-
