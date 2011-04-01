@@ -6,8 +6,8 @@ Installation
 
 Customizing
 ========================
-*If you want to customize errors markup, change **span.yaspeller_error** style in *ckeditor_path/plugins/yaspeller/css/**yaspeller.css***
-*You can change toolbar button icon replacing **button.png** in *ckeditor_path/plugins/yaspeller/images/*
+-If you want to customize errors markup, change **span.yaspeller_error** style in *ckeditor_path/plugins/yaspeller/css/**yaspeller.css***
+-You can change toolbar button icon replacing **button.png** in *ckeditor_path/plugins/yaspeller/images/*
 
 Contact
 ========================
