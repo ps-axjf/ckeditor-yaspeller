@@ -1,3 +1,7 @@
+Demo
+========================
+You can try plugin [at the demo page](http://ps-axjf.github.com/ckeditor-yaspeller/)
+
 Installation
 ========================
 1. After downloading archive extract it contents to your CKEditor plugins directory *ckeditor_path/plugins*.
