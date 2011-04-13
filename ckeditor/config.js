@@ -7,6 +7,11 @@ CKEDITOR.editorConfig = function( config )
 {
        config.extraPlugins = 'yaspeller';
        config.removePlugins = 'scayt';
+       //config.toolbar.push(['SpellCheckerMode'])
        config.toolbar = [['Bold', 'SpellCheckerMode']]
+    //  config.corePlugins = 'core/ajax'
+	// Define changes to default configuration here. For example:
+	// config.language = 'fr';
+	// config.uiColor = '#AADC6E';
 };
 
