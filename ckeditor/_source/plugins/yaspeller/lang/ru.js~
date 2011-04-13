@@ -1,0 +1,7 @@
+CKEDITOR.plugins.setLang( 'yaspeller', 'ru',
+    {
+        button : 'Включить/Выключить проверку орфографии',
+
+    }
+)
+

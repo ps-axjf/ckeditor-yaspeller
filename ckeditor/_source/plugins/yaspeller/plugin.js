@@ -1,18 +1,76 @@
+/*
+Copyright (c) 2011 (coding by Vitaliy Fedorets <ps.axjf@gmail.com>; idea, mentorship, sponsorship by Vitaly Puzrin <vitaly@rcdesign.ru>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 (function(){
+
+    var changemode = {
+        canUndo: false,
+        exec: function(editor) {
+            var a = editor.getCommand('changespellcheckermode')
+            if (a.state==1) {
+                a.setState(CKEDITOR.TRISTATE_OFF)
+                var errs = editor.document.getElementsByTag('span')
+                var errs_len = errs.count()
+                if (errs_len>0){for (var i=errs_len-1;i>=0;i--){if (errs.getItem(i).hasClass('yaspeller_error')){errs.getItem(i).remove(true);}}}
+            }
+            else {
+                a.setState(CKEDITOR.TRISTATE_ON);
+                checkSpellInit(editor.document.getBody(), editor.name)
+            }
+        }
+    }
+
     CKEDITOR.plugins.add('yaspeller',
     {
+        lang : ['en', 'ru'],
+
         init: function(editor){
-            yaspeller_errors = {}
-            yaspeller_corrs = {}
-            yaspeller_sarr = new Array()
             separator = ".,\"'?!;: "
+            cinstance = ''
+            focusafter = true
 
             editor.on( 'contentDom', function(){
 			    var doc = editor.document;
 				body = doc.getBody();
 				html = doc.getDocumentElement();
 				doc.on('keydown', checkSpell, editor);
+                doc.appendStyleSheet(CKEDITOR.plugins.getPath('yaspeller')+'css/yaspeller.css')
+				if (typeof yaspeller_errors  == "undefined") yaspeller_errors={}
+				if (typeof yaspeller_corrs  == "undefined") yaspeller_corrs={}
+				if (typeof yaspeller_sarr  == "undefined") yaspeller_sarr={}
+				yaspeller_errors[editor.name] = {}
+				yaspeller_corrs[editor.name] = {}
+				yaspeller_sarr[editor.name] = new Array()
+				checkSpellInit(body, editor.name)
 			});
+            editor.addCommand('changespellcheckermode', changemode);
+            editor.getCommand('changespellcheckermode').setState(CKEDITOR.TRISTATE_ON)
+            editor.ui.addButton( 'SpellCheckerMode',
+				{
+					label : editor.lang.yaspeller.button,
+					icon: this.path + 'images/button.png',
+					command : 'changespellcheckermode'
+				});
+
             var dataProcessor = editor.dataProcessor;
 			htmlFilter = dataProcessor && dataProcessor.htmlFilter;
 			if (htmlFilter){
@@ -33,23 +91,21 @@
 			if (editor._.elementsPath && (elementsPathFilters = editor._.elementsPath.filters)){elementsPathFilters.push(spellFilter);}
 			editor.addRemoveFormatFilter && editor.addRemoveFormatFilter(spellFilter);
 
-            editor.addCss('span.yaspeller_error {background: transparent url(data:image/gif;base64,R0lGODlhBAADAIABAP8NDQAAACH5BAEAAAEALAAAAAAEAAMAAAIFRB5mGQUAOw==) repeat-x 50% 100% !important;background-image: url("data:image/gif;base64,R0lGODlhBAADAIABAP8NDQAAACH5BAEAAAEALAAAAAAEAAMAAAIFRB5mGQUAOw==")}')
-
             if (editor.addMenuItem) {editor.addMenuGroup('yaspellergroup',-1);}
             if (editor.contextMenu){
                 editor.contextMenu.addListener(function(element, selection){
                     if (element && element.is('span') && element.getAttribute('data-spell-word')){
                         var e_word = element.getText()
                         var ea = {}
-                        if (yaspeller_errors[e_word].s.length>0){
-                            for (var i=0;i<yaspeller_errors[e_word].s.length;i++){
-                                editor.addMenuItem('yaspelleritem'+yaspeller_errors[e_word].s[i], {
-                                    label: yaspeller_errors[e_word].s[i],
+                        if (yaspeller_errors[editor.name][e_word].s.length>0){
+                            for (var i=0;i<yaspeller_errors[editor.name][e_word].s.length;i++){
+                                editor.addMenuItem('yaspelleritem'+yaspeller_errors[editor.name][e_word].s[i], {
+                                    label: yaspeller_errors[editor.name][e_word].s[i],
                                     onClick: function (){replaceWord(this.editor, this.label);},
                                     group: 'yaspellergroup',
                                     order: -1
                                   });
-                                ea['yaspelleritem'+yaspeller_errors[e_word].s[i]] = CKEDITOR.TRISTATE_OFF
+                                ea['yaspelleritem'+yaspeller_errors[editor.name][e_word].s[i]] = CKEDITOR.TRISTATE_OFF
                             }
                         }
                         else {
@@ -77,37 +133,92 @@
 	    check: function(text){
 	        temp_err = new Array()
 	        for (i=0;i<text.length;i++){temp_err.push(text[i].word)}
-		    for (i=0;i<yaspeller_sarr.length;i++){if (!inArray(temp_err, yaspeller_sarr[i])){ yaspeller_corrs[yaspeller_sarr[i]] = 1;}}
-            for (i=0;i<text.length;i++) {yaspeller_errors[text[i].word] = text[i]}
-            var range = CKEDITOR.currentInstance.getSelection().getRanges()[0];
-            var s = range.createBookmark(true)
-            var errs = CKEDITOR.currentInstance.document.getElementsByTag('span')
+		    for (i=0;i<yaspeller_sarr[cinstance].length;i++){if (!inArray(temp_err, yaspeller_sarr[cinstance][i])){ yaspeller_corrs[cinstance][yaspeller_sarr[cinstance][i]] = 1;}}
+            for (i=0;i<text.length;i++) {yaspeller_errors[cinstance][text[i].word] = text[i]}
+            if (focusafter) {
+                var range = CKEDITOR.instances[cinstance].getSelection().getRanges()[0];
+                if (inWord(range)){
+                    st = getWordStart(range)
+                    if (inArray(temp_err, getWordContent(range))){
+                        range.setStart(range.startContainer, st);
+                        range.setEnd(range.startContainer, st);
+                    }
+                    var s = range.createBookmark(true);
+                }
+                else {var s = range.createBookmark(true);}
+            }
+            var errs = CKEDITOR.instances[cinstance].document.getElementsByTag('span')
             var errs_len = errs.count()
             if (errs_len>0){for (var i=errs_len-1;i>=0;i--){if (errs.getItem(i).hasClass('yaspeller_error')){errs.getItem(i).remove(true);}}}
-            var current_text = CKEDITOR.currentInstance.getData()
-            for (word in yaspeller_errors){current_text = current_text.replace(word, '<span class="yaspeller_error" data-spell-word="'+word+'">'+word+'</span>')}
-            CKEDITOR.currentInstance.document.getBody().setHtml(current_text)
-            var newRange = new CKEDITOR.dom.range(range.document);
-            newRange.moveToBookmark(s)
-            newRange.select()
+            var current_text = CKEDITOR.instances[cinstance].getData()
+            for (word in yaspeller_errors[cinstance]){current_text = current_text.replaceAll(word, '<span class="yaspeller_error" data-spell-word="'+word+'">'+word+'</span>')}
+            CKEDITOR.instances[cinstance].document.getBody().setHtml(current_text)
+            if (focusafter){
+                var newRange = new CKEDITOR.dom.range(range.document);
+                newRange.moveToBookmark(s)
+                newRange.select()
+            }
+            cinstance = ''
         }
 	};
 
 
     var checkSpellTimer = null;
 
+    String.prototype.replaceAll = function(search, replace){return this.split(search).join(replace);}
+
+
+    function getWordStart(range){
+        var word_start = 0
+        var first_part = range.startContainer.getText().substr(0, range.startOffset)
+        for (var i=0;i<separator.length;i++){
+            cs = first_part.lastIndexOf(separator[i]);
+            if (cs>word_start){word_start = cs+1;}
+        }
+        return word_start
+    }
+
+
+    function getWordContent(range){
+        var word_start = 0
+        var word_end = 500
+        var text = range.startContainer.getText()
+        var first_part = text.substr(0, range.startOffset)
+        var second_part = text.substr(range.startOffset)
+        for (var i=0;i<separator.length;i++){
+            cs = first_part.lastIndexOf(separator[i])
+            if (cs>word_start){word_start = cs+1;}
+            sc = second_part.indexOf(separator[i])
+            if (sc!=-1 && sc<word_end){word_end = sc;}
+        }
+        if (word_start==-1){word_start = 0;}
+        if (word_end==500){word_end = text.length;}
+        else {word_end = range.startOffset-word_start + word_end;}
+        return text.substr(word_start, word_end)
+    }
+
+
+
+    function inWord(range){
+        var pl = range.startContainer.getText().substr(range.startOffset-1, 1)
+        for (var i=0;i<separator.length;i++){if (pl==separator[i]){ return false;}}
+        var ll = range.startContainer.getText().substr(range.startOffset, 1)
+        for (var i=0;i<separator.length;i++){if (ll==separator[i]){ return false;}}
+        return true
+    }
+
     function replaceWord(editor, word){
-        editor.focus()
+        if (CKEDITOR.env.ie){editor.focus();}
         var range = editor.getSelection().getRanges()[0]
         var parent = range.startContainer.getParent()
         if (CKEDITOR.env.ie){
-            parent.getChildren().getItem(0).$.data=''
-            range.startContainer.$.data=word
+            parent.getChildren().getItem(0).$.data='';
+            range.startContainer.$.data=word;
         }
-        else {range.startContainer.$.replaceWholeText(word);}
+        else { range.startContainer.$.replaceWholeText(word);}
         parent.remove(true)
-        editor.focus()
-
+        editor.focus();
+        range.select();
     }
 
     function getCharset() {
@@ -118,7 +229,8 @@
     }
 
     function checkSpell(e){
-        if (e.data.$.keyCode<37 || e.data.$.keyCode>40){
+        if ((e.data.$.keyCode<37 || e.data.$.keyCode>40) && this.getCommand('changespellcheckermode').state==1){
+            cinstance = this.name
             var range = this.getSelection().getRanges()[0];
             var parent = range.startContainer.getParent()
             if (checkSpellTimer) {clearTimeout(checkSpellTimer);}
@@ -130,26 +242,9 @@
         }
     }
 
-
-    function getWord(text, offset){
-        var word_start = 0
-        var word_end = 500
-        var first_part = text.substr(0, offset)
-        var second_part = text.substr(offset)
-        for (var i=0;i<separator.length;i++){
-            cs = first_part.lastIndexOf(separator[i])
-            if (cs>word_start){word_start = cs+1;}
-            sc = second_part.indexOf(separator[i])
-            if (sc!=-1 && sc<word_end){word_end = sc;}
-        }
-        if (word_start==-1){word_start = 0;}
-        if (word_end==500){word_end = text.length;}
-        else {word_end = offset-word_start + word_end;}
-        return text.substr(word_start, word_end)
-
-    }
-
     function checkWord(text, charset){
+        cinstance = cinstance
+        var text = text.substring(0, text.length-1);
         var request = "http://speller.yandex.net/services/spellservice.json/checkText?options=8&format=plain&ie="+charset+"&text="+text+"&callback=CKEDITOR.plugins.yaspeller.check";
         var head = document.getElementsByTagName("head").item(0);
         var script = document.createElement("script");
@@ -159,11 +254,10 @@
     }
 
 
-
     function splitText(text){
         var words = new Array()
         var seps = new Array()
-        var text = text.replace(/([.,\"'?!;: ]+$)/g, "")
+        var text = text.replace(/([.,\"'?!;: ]+$)/g, "")+' '
         for (var i=0;i<text.length;i++){ if (/[.,\"'?!;: ]/gm.test(text[i])){seps.push(i);}}
         if (seps.length==0){words.push(text);}
         else {
@@ -192,24 +286,56 @@
         return false;
     }
 
+    function removeHTMLTags(text) {
+	    var strInputCode = text;
+	    var strTagStrippedText = strInputCode.replace(/<\/?[^>]+(>|$)/g, "");
+	    return strTagStrippedText;
+    }
+
     function checkSpellExec(){
         var range = this.getSelection().getRanges()[0];
         range.shrink(CKEDITOR.SHRINK_TEXT)
         var send_text = ''
-        var text = this.document.getBody().getChild(0).getText()
-        var splitted_text = uniqueArray(splitText(text))
-        for (word in yaspeller_errors) {if (!inArray(splitted_text, word)){delete yaspeller_errors[word];}}
-        for (word in yaspeller_corrs) {if (!inArray(splitted_text, word)){delete yaspeller_corrs[word];}}
+        cinstane = this.name
+        var text = this.document.getBody().getHtml().replace('<br/>',' ').replace('<br>', ' ')
+        var splitted_text = uniqueArray(splitText(removeHTMLTags( text)))
+        for (word in yaspeller_errors[cinstance]) {if (!inArray(splitted_text, word)){delete yaspeller_errors[cinstance][word];}}
+        for (word in yaspeller_corrs[cinstance]) {if (!inArray(splitted_text, word)){delete yaspeller_corrs[cinstance][word];}}
         if (splitted_text.length>0) {
             for (i=0;i<splitted_text.length;i++){
-                if (!yaspeller_errors[splitted_text[i]] && !yaspeller_corrs[splitted_text[i]]){
-                    yaspeller_sarr.push(splitted_text[i])
+                if (!yaspeller_errors[cinstance][splitted_text[i]] && !yaspeller_corrs[cinstance][splitted_text[i]]){
+                    yaspeller_sarr[cinstance].push(splitted_text[i])
                     send_text+=splitted_text[i]+' '
                 }
             }
+            focusafter = true
             checkWord(send_text, getCharset())
         }
         checkSpellTimer = null;
+    }
+
+    function checkSpellInit(body, name){
+        var send_text = ''
+        if (body.getChild(0)!=null){
+            var text = body.getHtml().replace('<br/>',' ').replace('<br>', ' ')
+            var splitted_text = uniqueArray(splitText(text))
+            if (cinstance=='') {
+                cinstance = name
+                for (word in yaspeller_errors[cinstance]) {if (!inArray(splitted_text, word)){delete yaspeller_errors[cinstance][word];}}
+                for (word in yaspeller_corrs[cinstance]) {if (!inArray(splitted_text, word)){delete yaspeller_corrs[cinstance][word];}}
+                if (splitted_text.length>0) {
+                    for (i=0;i<splitted_text.length;i++){
+                        if (!yaspeller_errors[cinstance][splitted_text[i]] && !yaspeller_corrs[cinstance][splitted_text[i]]){
+                            yaspeller_sarr[cinstance].push(splitted_text[i])
+                            send_text+=splitted_text[i]+' '
+                        }
+                    }
+                    focusafter = false
+                    checkWord(send_text, getCharset())
+                }
+            }
+            else CKEDITOR.tools.setTimeout( checkSpellInit, 100, this, [body, name]);
+        }
     }
 
 
